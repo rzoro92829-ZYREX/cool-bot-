@@ -29,7 +29,7 @@ from telegram.ext import (
 # ==================== CONFIGURATION (HARDCODED) ====================
 # Replace these with your actual values
 BOT_TOKEN = "8260905342:AAF6VR62-At2CUb5ZGBuORUG4-r-_DzZYqo"  # Get from @BotFather
-OWNER_ID = 8909378644 # Your Telegram User ID (get from @userinfobot)
+OWNER_ID = 8909378644  # Your Telegram User ID (get from @userinfobot)
 PASSWORD = "180310"  # Default password for bot access
 
 # Flask port (Railway provides this via PORT environment variable)
@@ -278,6 +278,7 @@ def track_ip():
 # ==================== TELEGRAM BOT ====================
 # Global reference to the bot loop
 bot_loop = None
+bot_app = None
 
 async def send_telegram_message(chat_id, text, parse_mode="HTML"):
     """Send a message via Telegram bot."""
@@ -733,7 +734,6 @@ async def handle_password_change(update: Update, context: ContextTypes.DEFAULT_T
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancel current operation."""
-    user_id = update.effective_user.id
     if context.user_data.get('changing_password'):
         context.user_data['changing_password'] = False
         await update.message.reply_text("❌ Password change cancelled.")
@@ -751,7 +751,8 @@ def main():
 
     # Setup bot
     bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
-    bot_loop = bot_app.loop
+    # FIXED: Use asyncio.get_event_loop() instead of bot_app.loop
+    bot_loop = asyncio.get_event_loop()
 
     # Add handlers
     bot_app.add_handler(CommandHandler("start", start))
@@ -763,6 +764,9 @@ def main():
     
     # Password input handler
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_password_input))
+    
+    # Password change handler
+    bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_password_change))
     
     # Callback handlers
     bot_app.add_handler(CallbackQueryHandler(button_callback))
